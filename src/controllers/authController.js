@@ -1,32 +1,37 @@
 const jwt = require('jsonwebtoken');
-const { MOCK_USER, JWT_SECRET } = require('../config/env');
+const { MOCK_USERS, JWT_SECRET } = require('../config/env');
 
 const login = (req, res) => {
   const { username, password } = req.body;
 
-  if (username === MOCK_USER.username && password === MOCK_USER.password) {
+  // Busca en la lista de usuarios autorizados
+  const foundUser = MOCK_USERS.find(
+    (u) => u.username === username && u.password === password
+  );
+
+  if (foundUser) {
     const token = jwt.sign(
       { 
-        username: MOCK_USER.username, 
-        role: MOCK_USER.role, 
-        name: MOCK_USER.name 
+        username: foundUser.username, 
+        role: foundUser.role, 
+        name: foundUser.name 
       },
       JWT_SECRET,
       { expiresIn: '2h' }
     );
 
-    console.log(`[AUTH SUCCESS] Usuario ${username} autenticado exitosamente.`);
+    console.log(`[AUTH SUCCESS] Usuario '${foundUser.username}' autenticado exitosamente.`);
     return res.json({
       token,
       user: {
-        username: MOCK_USER.username,
-        role: MOCK_USER.role,
-        name: MOCK_USER.name
+        username: foundUser.username,
+        role: foundUser.role,
+        name: foundUser.name
       }
     });
   }
 
-  // Log de auditoría para detección de fuerza bruta / Fail2Ban
+  // Si no coincide con ninguno, se registra el fallo para Fail2Ban
   console.warn(`[AUTH FAILED] Intento no autorizado para el usuario: '${username}'`);
   return res.status(401).json({ error: 'Credenciales inválidas' });
 };
